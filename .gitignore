@@ -1,0 +1,55 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+node_modules
+dist
+playwright-report
+test-results
+dist-ssr
+coverage
+__pycache__/
+*.py[cod]
+server/dist
+packages/server/dist
+*.local
+ROADMAP.md
+
+config.yaml
+.env
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.superpowers/
+CLAUDE.md
+# Client source map artifacts
+packages/client/src/**/*.js
+
+# .NET build artifacts
+bin/
+obj/
+*.user
+*.userosscache
+*.suo
+*.userprefs
+.vs/
+TestResults/
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# .NET CLI tools
+.dotnet/

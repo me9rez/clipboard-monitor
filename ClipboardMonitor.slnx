@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/native/">
+    <Project Path="native/ClipboardMonitor.csproj" />
+    <Project Path="native/ClipboardMonitor.Tests/ClipboardMonitor.Tests.csproj" />
+  </Folder>
+</Solution>
