@@ -8,12 +8,13 @@
  *   cd native && dotnet build -c Release
  *
  * 运行方式:
- *   node example/basic-usage.js
+ *   npx tsx example/basic-usage.ts
  *
  * 启动后，在 Windows 中复制任意文本、图片或文件，观察终端输出。
  */
 
 import ClipboardMonitor from '../src/clipboardMonitor.js';
+import type { ClipboardMessage } from '../src/types.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
@@ -26,11 +27,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const exePath = join(__dirname, '../native/bin/Release/net10.0-windows/ClipboardMonitor.exe');
 
 if (!existsSync(exePath)) {
-    console.error('❌ 错误: 找不到 C# Native sidecar 可执行文件');
-    console.error('   路径:', exePath);
-    console.error('   请先编译项目:');
-    console.error('   cd native && dotnet build -c Release\n');
-    process.exit(1);
+  console.error('❌ 错误: 找不到 C# Native sidecar 可执行文件');
+  console.error('   路径:', exePath);
+  console.error('   请先编译项目:');
+  console.error('   cd native && dotnet build -c Release\n');
+  process.exit(1);
 }
 
 // ------------------------------------------------------------------
@@ -40,10 +41,10 @@ const monitor = new ClipboardMonitor(exePath);
 
 // 拦截 handleMessage 以便在终端打印收到的结构化数据
 const originalHandleMessage = monitor.handleMessage.bind(monitor);
-monitor.handleMessage = (msg) => {
-    const timestamp = new Date().toLocaleTimeString();
-    console.log(`[${timestamp}] 📥 收到消息:`, JSON.stringify(msg));
-    return originalHandleMessage(msg);
+monitor.handleMessage = (msg: ClipboardMessage) => {
+  const timestamp = new Date().toLocaleTimeString();
+  console.log(`[${timestamp}] 📥 收到消息:`, JSON.stringify(msg));
+  return originalHandleMessage(msg);
 };
 
 // ------------------------------------------------------------------
@@ -60,8 +61,8 @@ monitor.start();
 // 4. 优雅退出
 // ------------------------------------------------------------------
 process.on('SIGINT', () => {
-    console.log('\n🛑 接收到中断信号，正在停止...');
-    monitor.stop();
-    console.log('✅ 已安全退出');
-    process.exit(0);
+  console.log('\n🛑 接收到中断信号，正在停止...');
+  monitor.stop();
+  console.log('✅ 已安全退出');
+  process.exit(0);
 });

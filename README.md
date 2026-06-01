@@ -46,14 +46,14 @@ ClipboardMonitor/
 │   ├── Program.cs                           # Win32 剪贴板监听核心
 │   └── ClipboardMonitor.Tests/              # xUnit 单元测试
 ├── src/
-│   └── clipboardMonitor.js                  # 纯 ESM 通用包装器
+│   └── clipboardMonitor.ts                  # 纯 ESM 通用包装器
 ├── example/
-│   └── basic-usage.js                       # 命令行演示脚本
+│   └── basic-usage.ts                       # 命令行演示脚本
 ├── tests/
-│   ├── clipboardMonitor.test.js             # Vitest 单元测试
-│   └── fake-clipboard-monitor.js            # Node 替身脚本（测试用）
-├── package.json
-├── vitest.config.js
+│   ├── clipboardMonitor.test.ts             # Vitest 单元测试
+│   └── fake-clipboard-monitor.ts            # Node 替身脚本（测试用）
+├── package.tson
+├── vitest.config.ts
 └── README.md
 ```
 
@@ -79,7 +79,7 @@ dotnet build -c Release
 #### Node.js
 
 ```js
-import ClipboardMonitor from './src/clipboardMonitor.js';
+import ClipboardMonitor from './src/clipboardMonitor.ts';
 
 const monitor = new ClipboardMonitor('./native/bin/Release/net10.0-windows/ClipboardMonitor.exe');
 monitor.start();
@@ -91,18 +91,18 @@ monitor.stop();
 #### Bun
 
 ```js
-import ClipboardMonitor from './src/clipboardMonitor.js';
+import ClipboardMonitor from './src/clipboardMonitor.ts';
 
 const monitor = new ClipboardMonitor('./native/bin/Release/net10.0-windows/ClipboardMonitor.exe');
 monitor.start();
 ```
 
-Bun 完全兼容 Node.js `child_process` API，`clipboardMonitor.js` 可直接运行无需修改。
+Bun 完全兼容 Node.js `child_process` API，`clipboardMonitor.ts` 可直接运行无需修改。
 
 #### Deno
 
 ```ts
-import ClipboardMonitor from './src/clipboardMonitor.js';
+import ClipboardMonitor from './src/clipboardMonitor.ts';
 
 const monitor = new ClipboardMonitor('./native/bin/Release/net10.0-windows/ClipboardMonitor.exe');
 monitor.start();
@@ -113,10 +113,10 @@ Deno 支持 Node.js 兼容层（`npm:` 或 `--compat`），`child_process.spawn`
 #### Electron（Main Process）
 
 ```js
-// main.js / background.js
+// main.ts / background.ts
 import { app } from 'electron';
 import path from 'path';
-import ClipboardMonitor from './src/clipboardMonitor.js';
+import ClipboardMonitor from './src/clipboardMonitor.ts';
 
 const exePath = path.join(process.resourcesPath, 'ClipboardMonitor.exe');
 const monitor = new ClipboardMonitor(exePath);
@@ -133,7 +133,7 @@ app.on('before-quit', () => {
 **打包注意事项**：使用 `electron-builder` 时，将 `ClipboardMonitor.exe` 放入 `extraResources`，避免被打包进 asar：
 
 ```json
-// electron-builder.json
+// electron-builder.tson
 {
   "extraResources": [
     {
@@ -147,9 +147,9 @@ app.on('before-quit', () => {
 #### NW.js
 
 ```js
-// background.js / node-main
+// background.ts / node-main
 import path from 'path';
-import ClipboardMonitor from './src/clipboardMonitor.js';
+import ClipboardMonitor from './src/clipboardMonitor.ts';
 
 const exePath = path.join(nw.__dirname, 'native/ClipboardMonitor.exe');
 const monitor = new ClipboardMonitor(exePath);
@@ -164,7 +164,7 @@ nw.App.on('close', () => {
 ### 3. 运行演示
 
 ```bash
-node example/basic-usage.js
+npx tsx example/basic-usage.ts
 ```
 
 启动后在 Windows 中复制任意文本/图片/文件，观察终端输出。
@@ -274,7 +274,7 @@ native/bin/Release/net10.0-windows/win-x64/publish/ClipboardMonitor.exe
 
 ## 故障排查
 
-启动 `example/basic-usage.js` 后，终端会输出 `[DIAG]` 前缀的诊断日志：
+启动 `example/basic-usage.ts` 后，终端会输出 `[DIAG]` 前缀的诊断日志：
 
 ```
 [DIAG] GetModuleHandle(null) = 0x7FF7C29E0000

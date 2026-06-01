@@ -1,57 +1,44 @@
-# ClipboardMonitor Agent Notes
+# AGENTS.md — ClipboardMonitor
 
-## 项目结构
+> 本文档面向 AI 编码代理。人类用户请查阅 [README.md](./README.md)。
 
-- `src/clipboardMonitor.js` — 唯一 JS 库入口（`default export class ClipboardMonitor`）
-- `native/Program.cs` — C# sidecar 唯一源文件
-- `native/ClipboardMonitor.csproj` — C# 主项目（`net10.0-windows`，`Exe`）
-- `native/ClipboardMonitorAssemblyInfo.cs` — 暴露 internals 给测试程序集
-- `native/ClipboardMonitor.Tests/` — xUnit 测试项目
-- `ClipboardMonitor.slnx` — 解决方案（**slnx 新格式**，不是 .sln）
-- `tests/clipboardMonitor.test.js` + `tests/fake-clipboard-monitor.js` — vitest 集成/单元测试
-- `example/basic-usage.js` — 演示脚本
+## 项目定位
 
-## 核心架构
+高并发轻量级剪贴板监听 Native sidecar 服务。JS 侧为纯 ESM TypeScript，C# 侧为 Native AOT Console，通过 `child_process.spawn` + stdout JSON Stream 通信。
 
-- JS 进程 `child_process.spawn` 启动 C# EXE，stdout 按行 JSON 协议
-- 消息类型：`text` / `files` / `image_path` / `error`，优先级 `files > image_path > text`
-- 进程退出靠**关闭 stdin**（不是 `kill`），C# 端 `MonitorStdin` 线程检测 EOF 后 `Environment.Exit(0)`
-- 图片消息：JS 侧消费后必须 `unlink` 临时 PNG，否则磁盘膨胀
-- 平台：**仅 Windows x64**；C# `TargetFramework=net10.0-windows`
+## 关键约束（必须遵守）
 
-## 命令
+1. **纯 ESM + TypeScript**：所有 JS/TS 源码必须使用 ESM（`import`/`export`），禁止使用 CJS（`require`/`module.exports`）。
+2. **多运行时兼容**：代码不得依赖任何特定运行时（Node.js / Bun / Deno / Electron / NW.js）的专有 API，只能使用标准 `child_process`、`readline`、`fs`。
+3. **C# 侧 Win32 规范**：
+   - 所有 P/Invoke 必须标注 `SetLastError = true`
+   - `hInstance` 必须使用 `GetModuleHandle(null)`，禁止 `Marshal.GetHINSTANCE`
+   - 每个关键 Win32 调用后必须检查返回值并输出 `[DIAG]` 诊断日志到 stderr
+4. **消息协议不可变**：stdout JSON 格式（`type`/`payload`）及四种类型（`text`/`files`/`image_path`/`error`）为契约，不可随意增删字段。
+5. **测试门禁**：任何代码修改必须通过 `pnpm typecheck`、`npm test`、`dotnet test` 三重验证。
+6. **文件组织**：
+   - `src/` — TS 源码（`clipboardMonitor.ts`、`types.ts`）
+   - `native/` — C# 项目（`Program.cs`、`ClipboardMonitor.csproj`）
+   - `tests/` — Vitest TS 测试
+   - `example/` — 可运行的 TS 演示脚本
+   - `docs/` — 详细技术文档（见下）
 
-### JS 侧
+## 详细文档索引
 
-- `pnpm install` — 拉 vitest 4.x
-- `pnpm test` — 跑 vitest（**不需要**已构建的 EXE）
+| 主题 | 文档 |
+|------|------|
+| 架构设计 | [docs/architecture.md](./docs/architecture.md) |
+| JSON Stream 协议 | [docs/protocol.md](./docs/protocol.md) |
+| API 参考 | [docs/api.md](./docs/api.md) |
+| C# 侧开发规范 | [docs/csharp-guidelines.md](./docs/csharp-guidelines.md) |
+| 测试规范 | [docs/testing.md](./docs/testing.md) |
+| 故障排查 | [docs/troubleshooting.md](./docs/troubleshooting.md) |
 
-### C# 侧
+## 快速验证
 
-- `cd native && dotnet build -c Release` — 普通开发构建，产物 `native/bin/Release/net10.0-windows/ClipboardMonitor.exe`
-- `dotnet test native/ClipboardMonitor.Tests/ClipboardMonitor.Tests.csproj -c Release` — 跑 xUnit
-- `pnpm build:native` 或 `cd native && dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=true -p:PublishAot=true` — AOT 单文件发布到 `native/bin/Release/net10.0-windows/win-x64/publish/`
-
-注：xUnit 集成测试在 EXE 缺失时会自动 `dotnet build`，但要求 `dotnet` 在 PATH。
-
-### 演示
-
-- `node example/basic-usage.js` — **需先** `dotnet build -c Release`；脚本硬编码 `native/bin/Release/net10.0-windows/ClipboardMonitor.exe` 路径
-
-## 约定与陷阱
-
-- 主项目 csproj 已 `<Compile Remove="ClipboardMonitor.Tests\**\*.cs" />`，**不要**把测试代码放进 `native/` 根目录
-- AOT 标志（`PublishAot` 等）**不要**写进 csproj —— 仅命令行传，避免 build/test 阶段 restore 沉重 runtime packs
-- 子进程退出靠关闭 stdin，**不要**用 `kill`
-- JS 测试用 `tests/fake-clipboard-monitor.js` 作为 Node 子进程替身，**不要**为单元测试构建 EXE
-- C# 诊断日志用 `Console.Error.WriteLine`（带 `[DIAG]` 前缀），被 JS 透传到 stderr
-- 无 lint / format / typecheck 脚本
-
-## 调试
-
-- 启动 `example/basic-usage.js` 后缺 `[DIAG] 进入消息循环...` → 检查 admin 权限、杀毒软件、窗口类名冲突
-- 子进程残留 → 检查是否调用 `monitor.stop()`（关闭 stdin），不要用 `kill`
-
-## 测试约定
-
-改完代码后跑两边：`pnpm test` 和 `dotnet test native/ClipboardMonitor.Tests/ClipboardMonitor.Tests.csproj -c Release`。
+```bash
+pnpm typecheck        # TS 类型检查
+npm test              # JS/TS 测试
+dotnet test           # C# 测试
+npx tsx example/basic-usage.ts   # 端到端演示
+```

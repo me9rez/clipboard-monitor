@@ -4,9 +4,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.js'],
+    include: ['tests/**/*.test.ts'],
     deps: {
-      interopDefault: true
-    }
-  }
+      interopDefault: true,
+    },
+  },
 });

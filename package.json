@@ -2,15 +2,16 @@
   "name": "clipboard-monitor",
   "version": "1.0.0",
   "description": "高并发轻量级剪贴板监听 Native sidecar 服务，支持 Node.js / Bun / Deno / Electron / NW.js",
-  "main": "src/clipboardMonitor.js",
+  "main": "src/clipboardMonitor.ts",
   "type": "module",
   "files": [
-    "src/clipboardMonitor.js",
+    "src/",
     "native/bin/Release/net10.0-windows/win-x64/publish/ClipboardMonitor.exe"
   ],
   "scripts": {
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "prepublishOnly": "pnpm run build:native",
+    "dev": "tsx example/basic-usage.ts",
     "build:native": "cd native && dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=true -p:PublishAot=true"
   },
   "keywords": [
@@ -25,6 +26,9 @@
     "sidecar"
   ],
   "devDependencies": {
+    "@types/node": "^25.9.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.7"
   }
 }
