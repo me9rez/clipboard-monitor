@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 
 class Program
@@ -285,7 +286,7 @@ class Program
                         paths[i] = sb.ToString();
                     }
 
-                    SendJson(new { type = "files", payload = paths });
+                    SendJson(FileListMessage.Files(paths));
                     return; // 拦截，文件优先于图片及文本
                 }
             }
@@ -305,7 +306,7 @@ class Program
                             string tempFile = SaveDibToTempPng(pDib);
                             if (!string.IsNullOrEmpty(tempFile))
                             {
-                                SendJson(new { type = "image_path", payload = tempFile });
+                                SendJson(StringPayloadMessage.ImagePath(tempFile));
                                 return;
                             }
                         }
@@ -332,7 +333,7 @@ class Program
                             string? text = Marshal.PtrToStringUni(lpstr);
                             if (text != null)
                             {
-                                SendJson(new { type = "text", payload = text });
+                                SendJson(StringPayloadMessage.Text(text));
                             }
                         }
                         finally
@@ -351,7 +352,7 @@ class Program
         {
             // 将内部错误包装为 JSON 输出至前端，方便排查
             LogDiag($"ProcessClipboard 异常: {ex.Message}");
-            SendJson(new { type = "error", payload = ex.Message });
+            SendJson(StringPayloadMessage.Error(ex.Message));
         }
         finally
         {
@@ -426,15 +427,26 @@ class Program
         return string.Empty;
     }
 
-    internal static void SendJson(object data)
+    // --- 消息发送 ---
+    // Native AOT 下反射式序列化不可用，必须经 ClipboardJsonContext（源生成）序列化，见 Messages.cs。
+    internal static void SendJson(StringPayloadMessage message)
+        => SendJson(message, ClipboardJsonContext.Default.StringPayloadMessage);
+
+    internal static void SendJson(FileListMessage message)
+        => SendJson(message, ClipboardJsonContext.Default.FileListMessage);
+
+    private static void SendJson<T>(T message, JsonTypeInfo<T> typeInfo)
     {
         try
         {
             // 序列化后单行输出，并强制刷新 stdout 缓存，保证极低的延迟
-            string json = JsonSerializer.Serialize(data);
-            Console.WriteLine(json);
+            Console.WriteLine(JsonSerializer.Serialize(message, typeInfo));
             Console.Out.Flush();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            // 不静默吞异常：消息发不出去必须留痕，否则 JS 侧永久收不到数据且无从排查
+            LogDiag($"SendJson 失败: {ex.GetType().Name}: {ex.Message}");
+        }
     }
 }

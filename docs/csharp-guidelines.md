@@ -14,6 +14,25 @@ dotnet publish -c Release -r win-x64 --self-contained true \
   -p:PublishSingleFile=true -p:PublishTrimmed=true -p:PublishAot=true
 ```
 
+### JSON 序列化必须走源生成（AOT 硬约束）
+
+Native AOT 下 `JsonSerializer.IsReflectionEnabledByDefault = false`，反射式序列化在**运行时**抛
+`InvalidOperationException: Reflection-based serialization has been disabled for this application`。
+编译期只报 `IL2026`/`IL3050` 警告，不阻断发布，因此极易带着“能编译但一条消息都发不出去”的产物上线
+（历史上 `SendJson` 的 `catch { }` 会把异常吞掉，表现为 stdout 永久为空）。
+
+- 禁止 `JsonSerializer.Serialize(匿名对象)` / `JsonSerializer.Serialize(object)`。
+- 消息类型定义在 `Messages.cs`（`StringPayloadMessage` / `FileListMessage`），并注册进 `ClipboardJsonContext`。
+  新增消息类型时**必须**同步加 `[JsonSerializable(typeof(...))]`，否则 AOT 下会退回反射路径。
+- 不要用 `-p:JsonSerializerIsReflectionEnabledByDefault=true` 兜底：实测不抛异常，但匿名类型属性被裁剪，
+  输出静默变成 `{}`，比报错更难定位。
+- 发布后必须确认 **0 条 `IL2026`/`IL3050` 警告**，并做一次真机剪贴板端到端验证。
+
+```
+default (AOT)          → 反射+匿名类型: InvalidOperationException；源生成: OK
+switch=true (AOT)      → 反射+匿名类型: "{}"（静默错误）；源生成: OK
+```
+
 ## Win32 P/Invoke 规范
 
 ### 必须标注 `SetLastError = true`

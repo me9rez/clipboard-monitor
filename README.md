@@ -44,6 +44,7 @@ ClipboardMonitor/
 ├── native/
 │   ├── ClipboardMonitor.csproj              # C# Native AOT 项目
 │   ├── Program.cs                           # Win32 剪贴板监听核心
+│   ├── Messages.cs                          # 消息 DTO + JSON 源生成上下文（AOT 必需）
 │   └── ClipboardMonitor.Tests/              # xUnit 单元测试
 ├── src/
 │   └── clipboardMonitor.ts                  # 纯 ESM 通用包装器
@@ -237,7 +238,7 @@ monitor.handleMessage = (msg) => {
 dotnet test native/ClipboardMonitor.Tests/ClipboardMonitor.Tests.csproj -c Release
 ```
 
-- 5 个消息序列化测试（JSON 格式 / Unicode 兼容）
+- 7 个消息序列化测试（JSON 格式 / 精确协议形状 / Unicode 兼容 / 源生成上下文可用性）
 - 2 个进程生命周期集成测试（stdin 关闭 → 子进程自退）
 
 ### JS 测试
@@ -266,9 +267,12 @@ dotnet publish -c Release -r win-x64 --self-contained true \
 native/bin/Release/net10.0-windows/win-x64/publish/ClipboardMonitor.exe
 ```
 
-- 体积约 **1.5MB~2MB**
+- 体积约 **1.5MB~2.4MB**
 - 可在未安装 .NET 运行时的全新 Windows 虚拟机中直接运行
 - 启动时间 < 100ms
+- 消息序列化经 `Messages.cs` 的源生成上下文（`ClipboardJsonContext`）完成 —— AOT 下反射式
+  `JsonSerializer` 被禁用，直接用匿名对象序列化会运行时抛异常或静默输出 `{}`，详见
+  [docs/csharp-guidelines.md](./docs/csharp-guidelines.md#json-序列化必须走源生成aot-硬约束)
 
 ---
 

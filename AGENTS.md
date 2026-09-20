@@ -18,10 +18,14 @@
 5. **测试门禁**：任何代码修改必须通过 `pnpm typecheck`、`npm test`、`dotnet test` 三重验证。
 6. **文件组织**：
    - `src/` — TS 源码（`clipboardMonitor.ts`、`types.ts`）
-   - `native/` — C# 项目（`Program.cs`、`ClipboardMonitor.csproj`）
+   - `native/` — C# 项目（`Program.cs`、`Messages.cs`、`ClipboardMonitor.csproj`）
    - `tests/` — Vitest TS 测试
    - `example/` — 可运行的 TS 演示脚本
    - `docs/` — 详细技术文档（见下）
+7. **AOT 安全的 JSON 序列化**：发送消息一律用 `Messages.cs` 里的 DTO（`StringPayloadMessage` / `FileListMessage`）
+   经 `ClipboardJsonContext`（`[JsonSerializable]` 源生成）序列化；**禁止** `JsonSerializer.Serialize(匿名对象)`——
+   Native AOT 下反射式序列化被禁用，会运行时抛异常或静默输出 `{}`。新增消息类型必须同时补 `[JsonSerializable]`，
+   且发布后确认 0 条 `IL2026`/`IL3050` 警告（详见 docs/csharp-guidelines.md）。
 
 ## 详细文档索引
 
